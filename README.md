@@ -1,103 +1,53 @@
-Alpine Router Image
-===================
+# Alpine MT7920 Router Image
 
-Release: Alpine Linux 3.24.4 x86_64
-Build date: 2026-11-15
-Virtual disk size: 8 GiB
-Boot: UEFI / GPT
-Root filesystem: ext4, persistent read-write
-Install mode: Alpine sys
+Alpine Linux 3.24.4 x86_64 writable router disk image for UEFI virtual machines, configured for a MediaTek MT7920 Wi-Fi WAN and E1000 LAN.
 
-Artifacts
----------
-alpine-router-3.24.4-x86_64.raw
-  Primary RAW disk image. Use directly as a disk image with a compatible hypervisor.
+## Release assets
 
-alpine-router-3.24.4-x86_64.vmdk
-  Monolithic sparse VMDK conversion of the same RAW image.
+- `alpine-router-3.24.4-x86_64.raw.gz` — gzip-compressed 8 GiB RAW disk image. Decompress before attaching it to a VM.
+- `alpine-router-3.24.4-x86_64.vmdk` — monolithic sparse VMDK disk image.
+- `SHA256SUMS` — hashes for distributed assets and the decompressed RAW image.
+- `MANIFEST.txt` — build configuration and installed components.
+- `BUILD-REPORT.txt` — validation evidence and remaining hardware checks.
 
-SHA256SUMS
-  SHA256 hashes for RAW and VMDK.
+## Image configuration
 
-SOURCE-AND-BACKUP-SHA256SUMS
-  SHA256 hashes for the Alpine installer ISO, MT7920 firmware files and QCOW2 backup.
-  Paths in this file are relative to /var/tmp/alpine-router-build.
+- Alpine Linux 3.24.4 x86_64; kernel `6.18.63-0-lts`
+- UEFI / GPT; 8 GiB virtual disk; ext4 root filesystem mounted read-write
+- WAN: MediaTek MT7920 PCI passthrough, `mt7921e`, interface `wlan0`
+- LAN: E1000, `eth0`, `192.168.100.1/24`
+- DHCP range: `192.168.100.100`–`192.168.100.200`
+- IPv4 forwarding, iptables firewall, conntrack and NAT
+- dnsmasq, wpa_supplicant, OpenSSH and OpenRC startup
+- Upstream Wi-Fi gateway is obtained dynamically by DHCP; expected upstream gateway in the target network is `192.168.1.1`.
 
-Network layout
---------------
-WAN:
-  MediaTek MT7920 PCI passthrough
-  Linux interface: wlan0
-  Driver family: mt7921e
-  WPA supplicant config: /etc/wpa_supplicant/wpa_supplicant.conf
-  DHCP client starts after WPA association.
-  The WAN default route and DNS servers are learned from DHCP.
-  Expected upstream gateway confirmed by user: 192.168.1.1
+No Wi-Fi SSID or passphrase is embedded. Configure `/etc/wpa_supplicant/wpa_supplicant.conf` on first boot. See the network configuration instructions below.
 
-LAN:
-  E1000 virtual NIC
-  Alpine interface: eth0
-  Alpine address: 192.168.100.1/24
-  DHCP pool: 192.168.100.100 - 192.168.100.200
-  LAN DNS server: 192.168.100.1
-  LAN default gateway offered to clients: 192.168.100.1
+## First boot
 
-FreeBSD host side:
-  Expected TAP interface: tap10
-  Expected host address: 192.168.100.2/24
-  The host-side TAP is not created inside this image.
+1. Decompress the RAW image if using it: `gzip -dk alpine-router-3.24.4-x86_64.raw.gz`.
+2. Attach the image to a UEFI VM. Pass through the physical MT7920 device and provide an E1000 virtual NIC for LAN.
+3. Configure the Wi-Fi credentials in `/etc/wpa_supplicant/wpa_supplicant.conf`:
 
-Wi-Fi credentials
------------------
-No SSID or passphrase is embedded. This is intentional: credentials were not available
-as confirmed values in the source notes and were not guessed.
+   ```conf
+   network={
+       ssid="YOUR_SSID"
+       psk="YOUR_PASSPHRASE"
+       key_mgmt=WPA-PSK
+   }
+   ```
 
-On the router, add a network block to /etc/wpa_supplicant/wpa_supplicant.conf:
+4. Protect the configuration and restart supplicant: `chmod 600 /etc/wpa_supplicant/wpa_supplicant.conf && rc-service wpa_supplicant restart`.
+5. Change the initial root password after first access. The image enables SSH password authentication for initial LAN-side management; the firewall does not permit WAN-side inbound SSH.
 
-network={
-    ssid="YOUR_SSID"
-    psk="YOUR_PASSPHRASE"
-    key_mgmt=WPA-PSK
-}
+The host-side TAP interface is not created inside this guest. For the documented FreeBSD host layout, configure the host TAP separately as `tap10` with `192.168.100.2/24`.
 
-Then run:
-  chmod 600 /etc/wpa_supplicant/wpa_supplicant.conf
-  rc-service wpa_supplicant restart
+## Verification status
 
-The action hook starts udhcpc on wlan0 after WPA association and updates
-/etc/resolv.conf from the upstream DHCP lease. dnsmasq on eth0 uses that file
-for upstream DNS forwarding.
+QEMU TCG tests passed for UEFI boot, GPT/ESP, ext4 read-write persistence, `apk` package persistence, E1000 LAN, DHCP, DNS forwarding with a simulated upstream resolver, and isolated forwarding/conntrack/MASQUERADE. VMDK and QCOW2 image integrity checks passed.
 
-Management and security
-----------------------
-- OpenSSH is enabled.
-- Root password authentication is enabled for initial management.
-- IPv4 INPUT policy is DROP; LAN eth0 is trusted/allowed; WAN inbound SSH is not allowed.
-- IPv4 forwarding is enabled.
-- FORWARD default policy is DROP; eth0 -> wlan0 is allowed; established return traffic is allowed.
-- wlan0 egress is masqueraded.
-- Initial root password is stored separately on the build server at:
-  /var/tmp/alpine-router-build/credentials/root-password.txt
-  It is not included in this README, the image manifest, or the Notion build log.
-- Change the initial root password after first access.
+Physical MT7920 passthrough, firmware initialization on the actual card, WPA authentication, WAN DHCP and real Internet access have **not** yet been verified. QEMU test hardware did not include the physical MT7920. See `BUILD-REPORT.txt` for details.
 
-Validation boundaries
----------------------
-Verified in QEMU TCG:
-- UEFI boot from the installed image.
-- GPT, EFI System Partition and ext4 root partition.
-- Root filesystem mounted ext4 rw.
-- apk package installation and persistence after reboot.
-- E1000 LAN interface, static address and SSH access from LAN.
-- dnsmasq DHCP lease delivery and DNS forwarding when a simulated WAN resolver exists.
-- Linux forwarding, conntrack and MASQUERADE in an isolated virtual-interface test.
-- OpenRC persistence for networking, iptables, dnsmasq and sshd.
+## Source firmware
 
-Not verified in QEMU:
-- Physical MT7920 PCI passthrough.
-- Actual MT7920 firmware loading on the laptop.
-- WPA authentication against the user's Wi-Fi.
-- Actual WAN DHCP lease and Internet access on the physical laptop.
-
-QEMU does not contain the user's physical MT7920 device. These final hardware checks
-must be performed after attaching the card to the user's FreeBSD/bhyve environment.
+The MT7920 firmware pair was taken from the official `linux-firmware` repository at commit `87414f9ba8f875cb733281652474bccf93313e2f`. See `MANIFEST.txt` for file names and kernel module details.

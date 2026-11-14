@@ -1,5 +1,5 @@
-2db063b7008dcd821fd2b90a5de2f824cf1e6f5acb0a36fa99300c3f7f072b17  alpine-router-3.24.4-x86_64.raw.gz
-e6f391d5a4229e0c5f30af4210d1bb2d50b82791926547402cc6e8199d211628  alpine-router-3.24.4-x86_64.vmdk
+SHA256 (alpine-router-3.24.4-x86_64.raw.gz) = 2db063b7008dcd821fd2b90a5de2f824cf1e6f5acb0a36fa99300c3f7f072b17
+SHA256 (alpine-router-3.24.4-x86_64.vmdk) = e6f391d5a4229e0c5f30af4210d1bb2d50b82791926547402cc6e8199d211628
 
-# Original uncompressed RAW image SHA256 (after decompression):
-9ea37e350aa1cbf123583cc408cd6bb8879d83d8d5ce7ce757760aa14315792c  alpine-router-3.24.4-x86_64.raw
+Original uncompressed RAW image SHA256 (after gunzip):
+SHA256 (alpine-router-3.24.4-x86_64.raw) = 9ea37e350aa1cbf123583cc408cd6bb8879d83d8d5ce7ce757760aa14315792c
