@@ -1,0 +1,4 @@
+SHA256 (downloads/alpine-standard-3.24.4-x86_64.iso) = 92e3e4e4c6b8e265a889278de2a633c0f1456ca52820952666ecb395c3d23582
+SHA256 (config/WIFI_MT7961_patch_mcu_1a_2_hdr.bin) = a766c4e39815e554c80ce5b1596095ff283a60db93356679fecd6494f71cee23
+SHA256 (config/WIFI_RAM_CODE_MT7961_1a.bin) = 3edec74ffe341b917e7fa4ddb2b68851411f2416555f10619a5900fa4b141e6c
+SHA256 (backups/alpine-router-3.24.4-x86_64-verified.qcow2) = 7c1e442ec8a12d5a504327ba84f49f3e80e5d791d98ec715b0836a56365efa0a
