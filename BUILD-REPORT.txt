@@ -1,0 +1,71 @@
+BUILD REPORT
+============
+
+Result
+------
+Alpine Linux 3.24.4 x86_64 router disk image has been built on the GSM FreeBSD server.
+RAW, VMDK and a QCOW2 rollback backup were generated.
+
+Verified
+--------
+1. UEFI:
+   - QEMU EDK2 firmware loaded the image.
+   - The guest booted from the GPT disk using the EFI fallback loader.
+   - EFI partition contains EFI/BOOT/BOOTX64.EFI.
+
+2. Persistent storage:
+   - /dev/vda3 is ext4.
+   - /proc/mounts reported /dev/vda3 / ext4 rw,relatime.
+   - A marker written under /var/lib survived a guest reboot.
+   - The marker was removed before release.
+   - apk-installed packages remained installed after reboot.
+
+3. LAN:
+   - E1000 was detected as eth0.
+   - eth0 was configured as 192.168.100.1/24.
+   - dnsmasq issued a lease 192.168.100.187 to the FreeBSD TAP test client.
+   - dnsmasq DNS forwarding returned example.com A/AAAA records when the simulated
+     WAN interface supplied an upstream resolver.
+
+4. Firewall and NAT:
+   - iptables 1.8.13 (nf_tables) accepted the final saved rules.
+   - IPv4 forwarding remained enabled after reboot.
+   - An isolated network-namespace client connected through the router to a TCP service
+     on the simulated WAN-side host and received NAT_OK.
+   - FORWARD and MASQUERADE counters incremented.
+   - The temporary eth1 test rules were removed; the persistent final rules were restored
+     to eth0 -> wlan0 and wlan0 MASQUERADE.
+
+5. Services:
+   - networking, sysctl, iptables, dnsmasq and sshd are configured for OpenRC startup.
+   - wpa_supplicant is configured for wlan0 and enabled at boot.
+   - In QEMU without a WLAN device, wpa_supplicant reported failed because wlan0 was
+     absent; this is an expected limitation of the test hardware.
+
+Not verified
+------------
+- Physical MT7920 passthrough on the user's FreeBSD/bhyve host.
+- Firmware load on the actual MT7920 device.
+- WPA association with the user's SSID/password.
+- Real WAN DHCP and Internet access through 192.168.1.1.
+
+Release files
+-------------
+alpine-router-3.24.4-x86_64.raw
+alpine-router-3.24.4-x86_64.vmdk
+SHA256SUMS
+SOURCE-AND-BACKUP-SHA256SUMS
+README.txt
+MANIFEST.txt
+BUILD-REPORT.txt
+
+Rollback backup
+---------------
+Private rollback backup; not distributed.
+
+Access
+------
+Initial root password is stored at:
+  Private initial credential file on the build host; not distributed.
+
+The initial password is not embedded in this report or in Notion.

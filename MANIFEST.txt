@@ -1,0 +1,120 @@
+BUILD MANIFEST
+==============
+
+Build ID: alpine-router-3.24.4-x86_64-router-01
+Build date: 2026-11-15
+Builder: FreeBSD 15.1-RELEASE-p6 amd64 (GSM host)
+Virtualization used for build/test: QEMU 11.1.2, TCG
+Firmware: EDK2 QEMU x86_64 (edk2-qemu-x64 g202508_3)
+
+Guest OS
+--------
+Alpine Linux 3.24.4 x86_64
+Kernel: 6.18.63-0-lts
+Install mode: sys
+Disk format: GPT
+Firmware mode: UEFI
+ESP: 264 MiB, FAT (EFI System Partition)
+Swap: 2 GiB
+Root: approximately 5.7 GiB, ext4
+Root mount: rw,relatime
+UEFI fallback loader: EFI/BOOT/BOOTX64.EFI
+
+Primary artifacts
+-----------------
+alpine-router-3.24.4-x86_64.raw
+  Format: RAW
+  Virtual size: 8 GiB
+  Allocated size at build host: approximately 435 MiB
+
+alpine-router-3.24.4-x86_64.vmdk
+  Format: VMDK monolithicSparse
+  Virtual size: 8 GiB
+  File size at build host: approximately 309 MiB
+
+Backup
+------
+Private build-server rollback backup; not distributed.
+  Format: QCOW2
+  Virtual size: 8 GiB
+  File size at build host: approximately 217 MiB
+  qemu-img check: no errors found
+
+Network
+-------
+WAN interface: wlan0 (MT7920 PCI passthrough)
+Wireless driver: mt7921e
+LAN interface: eth0 (E1000)
+LAN address: 192.168.100.1/24
+LAN DHCP range: 192.168.100.100-192.168.100.200
+LAN DNS/gateway: 192.168.100.1
+FreeBSD host TAP target: tap10 / 192.168.100.2/24
+Expected upstream gateway: 192.168.1.1
+WAN gateway/DNS: acquired dynamically through DHCP, not hardcoded
+
+Installed components
+--------------------
+- linux-lts kernel 6.18.63-0-lts
+- iptables 1.8.13-r0 and iptables-openrc
+- dnsmasq 2.92_p2-r0 and dnsmasq-openrc
+- wpa_supplicant 2.11-r4 and wpa_supplicant-openrc
+- iw 6.17-r0
+- iproute2 7.0.0-r0
+- linux-firmware-mediatek 20260519-r0
+- wireless-regdb 2025.10.07-r0
+- OpenSSH
+
+MT7920 firmware
+---------------
+Source repository: official linux-firmware
+Pinned commit: 87414f9ba8f875cb733281652474bccf93313e2f
+Files:
+- /lib/firmware/mediatek/WIFI_MT7961_patch_mcu_1a_2_hdr.bin
+- /lib/firmware/mediatek/WIFI_RAM_CODE_MT7961_1a.bin
+
+The Alpine firmware package did not contain the required MT7920 1a firmware pair;
+the two files were added from the pinned upstream commit. The mt7921e module contains
+the matching firmware request strings and a PCI alias for 14c3:7920.
+
+OpenRC
+------
+boot:
+- networking
+- sysctl
+- iptables
+- wpa_supplicant
+
+default:
+- dnsmasq
+- sshd
+
+Security
+--------
+- Root initial password generated randomly; stored separately on the build server.
+- Root SSH password authentication enabled for initial management.
+- Firewall INPUT default DROP, trusted LAN eth0 allowed, WAN inbound not allowed.
+- IPv4 forwarding enabled.
+- Reverse-path filtering set to loose mode (rp_filter=2) for multi-interface routing.
+- No Wi-Fi credentials embedded.
+
+Verification
+------------
+PASS:
+- QEMU UEFI boot to Alpine login.
+- GPT/ESP layout and EFI fallback loader.
+- ext4 root mounted rw.
+- Persistent marker survived guest reboot (marker subsequently removed from release image).
+- apk packages persisted after reboot.
+- dnsmasq DHCP lease issued to the FreeBSD test TAP client.
+- DNS forwarding succeeded when a simulated WAN resolver was present.
+- Isolated forwarding + conntrack + MASQUERADE test returned NAT_OK.
+- iptables rules restored from persistent rules-save after reboot.
+- sshd, dnsmasq, iptables and networking started after reboot.
+- VMDK and QCOW2 qemu-img checks reported no errors.
+
+LIMITATIONS:
+- QEMU had no physical MT7920 device. wpa_supplicant was expectedly failed in the
+  single-E1000 QEMU boot because wlan0 did not exist.
+- Actual MT7920 PCI passthrough, firmware initialization, WPA association, WAN DHCP,
+  and Internet access remain physical-hardware validation items.
+- Wi-Fi SSID/passphrase were not supplied as confirmed values and are not embedded.
